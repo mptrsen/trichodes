@@ -2,18 +2,20 @@
 #                            sequencing data
 # *********************************************************************
 
+from pathlib import Path
+import pandas as pd
 
-# dependencies
+
 # *********************************************************************
 # configuration file
 configfile: "config/config.yaml"
-
-from pathlib import Path
 
 
 # global wild cards of sample and pairpair list
 (SAMPLES,) = glob_wildcards(Path(config["input_dir"], "{sample}_1.fq.gz"))
 
+
+localrules: all, multiqc
 
 # all output
 # *********************************************************************
@@ -22,13 +24,13 @@ rule all:
         # multiqc output depends on fastqc output, see multiqc rule
         "results/multiqc_report.html",
         # seqkit stats table
-        "doc/stats.tsv"
+        #"doc/stats.tsv"
 
 # seqkit stats - simple statistics overview
 # ********************************************************************
 rule seqkit_stats:
     input:
-        fastx = expand(Path(config["input_dir"], "/{sample}_{r}.fastq"), sample = SAMPLES, r = [ 1, 2 ])
+        fastx = expand(Path(config["input_dir"], "{sample}_{r}.fq.gz"), sample = SAMPLES, r = [ 1, 2 ])
     output:
         stats = "doc/stats.tsv"
     log:
@@ -36,7 +38,7 @@ rule seqkit_stats:
     params:
         command="stats",
         extra="--all --tabular"
-    threads: 2
+    threads: 20
     wrapper:
         "v2.10.0-1-g4099e4b/bio/seqkit"
 
@@ -73,14 +75,14 @@ rule fastp:
 	# unpaired="trimmed/pe/{sample}.singletons.fastq",
         merged="results/02_fastp/trimmed/{sample}.merged.fq.gz",
         failed="results/02_fastp/trimmed/{sample}.failed.fq.gz",
-        html="results/02_fastp/report/{sample}.html",
-        json="results/02_fastp/report/{sample}.json"
+        html="results/02_fastp/report/{sample}.fastp.html",
+        json="results/02_fastp/report/{sample}.fastp.json"
     log:
         "logs/fastp/{sample}.log"
     threads:
         3
     params:
-        adapters="--adapter_sequence AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT --adapter_sequence_r2 GATCGGAAGAGCACACGTCTGAACTCCAGTCACGGATGACTATCTCGTATGCCGTCTTCTGCTTG",
+        adapters="--adapter_sequence " + config["adapters"]["5prime"] + " --adapter_sequence_r2 " + config["adapters"]["3prime"],
         extra="--merge"
     threads: 2
     wrapper:
@@ -90,9 +92,8 @@ rule fastp:
 # *********************************************************************
 rule multiqc:
     input:
-        expand("results/01_fastqc/{sample}_1_fastqc.zip", sample=SAMPLES),
-        expand("results/01_fastqc/{sample}_2_fastqc.zip", sample=SAMPLES),
-        expand("results/02_fastp/report/{sample}.json", sample = SAMPLES)
+        expand("results/01_fastqc/{sample}_{r}_fastqc.zip", sample = SAMPLES, r = ["1", "2"]),
+        expand("results/02_fastp/report/{sample}.fastp.json", sample = SAMPLES)
     output:
         "results/multiqc_report.html",
         directory("results/multiqc_data")

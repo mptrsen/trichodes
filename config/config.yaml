@@ -6,3 +6,8 @@ logdir: logs
 
 # fastq files
 input_dir: input/fastq
+
+# Illumina sequencing adapters
+adapters:
+  5prime: AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT
+  3prime: GATCGGAAGAGCACACGTCTGAACTCCAGTCACGGATGACTATCTCGTATGCCGTCTTCTGCTTG
