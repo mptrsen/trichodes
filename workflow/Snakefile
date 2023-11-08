@@ -64,7 +64,7 @@ rule multiqc:
         expand(Path(config["fastqc"]["dir"], "{sample}_2_fastqc.zip"), sample=SAMPLES)
     output:
         "output/multiqc_report.html",
-        directory("qc/multiqc_data"),
+        directory("output/multiqc_data"),
     params:
         extra = "--data-dir"
     wrapper:
