@@ -12,59 +12,90 @@ from pathlib import Path
 
 
 # global wild cards of sample and pairpair list
-(SAMPLES,) = glob_wildcards(Path(config["input"]["fastq"], "{sample}_1.fq.gz"))
+(SAMPLES,) = glob_wildcards(Path(config["input_dir"], "{sample}_1.fq.gz"))
 
 
-# all output out
+# all output
 # *********************************************************************
 rule all:
     input:
         # multiqc output depends on fastqc output, see multiqc rule
-        "output/multiqc_report.html"
+        "results/multiqc_report.html",
+        # seqkit stats table
+        "doc/stats.tsv"
+
+# seqkit stats - simple statistics overview
+# ********************************************************************
+rule seqkit_stats:
+    input:
+        fastx = expand(Path(config["input_dir"], "/{sample}_{r}.fastq"), sample = SAMPLES, r = [ 1, 2 ])
+    output:
+        stats = "doc/stats.tsv"
+    log:
+        "logs/stats.log"
+    params:
+        command="stats",
+        extra="--all --tabular"
+    threads: 2
+    wrapper:
+        "v2.10.0-1-g4099e4b/bio/seqkit"
 
 
 # fastqc - check quality of raw fastq-files and merge fastqc reports
 # *********************************************************************
 rule fastqc:
     input:
-        r1 = Path(config["input"]["fastq"], "{sample}_1.fq.gz"),
-        r2 = Path(config["input"]["fastq"], "{sample}_2.fq.gz"),
+        Path(config["input_dir"], "{sample}_{r}.fq.gz")
     output:
-        r1_html = Path(config["fastqc"]["dir"], "{sample}_1_fastqc.html"),
-        r2_html = Path(config["fastqc"]["dir"], "{sample}_2_fastqc.html"),
-        r1_zip = Path(config["fastqc"]["dir"], "{sample}_1_fastqc.zip"),
-        r2_zip = Path(config["fastqc"]["dir"], "{sample}_2_fastqc.zip"),
+        html = "results/01_fastqc/{sample}_{r}.html",
+        zip  = "results/01_fastqc/{sample}_{r}_fastqc.zip" # the suffix _fastqc.zip is necessary for multiqc to find the file. If not using multiqc, you are free to choose an arbitrary filename
     params:
-        threads=config["threads"],
-        dir=directory(config["fastqc"]["dir"]),
+        extra = "--quiet"
     log:
-        Path(config["logdir"], "fastqc", "{sample}.fastqc.log")
-    conda:
-        "envs/fastqc.yaml"
-    shell:
-        """
-        echo "##############################################"
-        echo "------------    Running FastQC    ------------"
-        echo "##############################################"
+        "logs/fastqc/{sample}_{r}.log"
+    threads: 2
+    resources:
+        mem_mb = 1024
+    wrapper:
+        "v2.10.0-1-g4099e4b/bio/fastqc"
 
-        fastqc {input.r1} {input.r2} \
-            --threads {params.threads} \
-            --format fastq \
-            --quiet \
-            --outdir {params.dir} \
-            2> {log}
-        """
-
+# fastp - all-in-one fastq preprocessor
+# ********************************************************************
+rule fastp:
+    input:
+        sample = [ Path(config["input_dir"], "{sample}_1.fq.gz"), Path(config["input_dir"], "{sample}_2.fq.gz") ]
+    output:
+        trimmed=["results/02_fastp/trimmed/{sample}_1.fq.gz", "results/02_fastp/trimmed/{sample}_2.fq.gz"],
+        # Unpaired reads separately
+        unpaired1="results/02_fastp/trimmed/{sample}.u1.fq.gz",
+        unpaired2="results/02_fastp/trimmed/{sample}.u2.fq.gz",
+        # or in a single file
+	# unpaired="trimmed/pe/{sample}.singletons.fastq",
+        merged="results/02_fastp/trimmed/{sample}.merged.fq.gz",
+        failed="results/02_fastp/trimmed/{sample}.failed.fq.gz",
+        html="results/02_fastp/report/{sample}.html",
+        json="results/02_fastp/report/{sample}.json"
+    log:
+        "logs/fastp/{sample}.log"
+    threads:
+        3
+    params:
+        adapters="--adapter_sequence AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT --adapter_sequence_r2 GATCGGAAGAGCACACGTCTGAACTCCAGTCACGGATGACTATCTCGTATGCCGTCTTCTGCTTG",
+        extra="--merge"
+    threads: 2
+    wrapper:
+        "v2.10.0/bio/fastp"
 
 # multiqc - merge fastqc reports
 # *********************************************************************
 rule multiqc:
     input:
-        expand(Path(config["fastqc"]["dir"], "{sample}_1_fastqc.zip"), sample=SAMPLES),
-        expand(Path(config["fastqc"]["dir"], "{sample}_2_fastqc.zip"), sample=SAMPLES)
+        expand("results/01_fastqc/{sample}_1_fastqc.zip", sample=SAMPLES),
+        expand("results/01_fastqc/{sample}_2_fastqc.zip", sample=SAMPLES),
+        expand("results/02_fastp/report/{sample}.json", sample = SAMPLES)
     output:
-        "output/multiqc_report.html",
-        directory("output/multiqc_data"),
+        "results/multiqc_report.html",
+        directory("results/multiqc_data")
     params:
         extra = "--data-dir"
     wrapper:

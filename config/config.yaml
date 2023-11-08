@@ -5,15 +5,4 @@ threads: 2
 logdir: logs
 
 # fastq files
-input:
-   fastq: input/fastq
-
-
-# qc_raw_files - quality control on raw fastq files
-fastqc:
-   dir: output/fastqc
-
-
-# merge_qc_reports - merge fastqc files from raw fastq files
-multiqc:
-   dir: output/multiqc
+input_dir: input/fastq
