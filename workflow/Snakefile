@@ -8,11 +8,11 @@
 # configuration file
 configfile: "config/config.yaml"
 
-import os
+from pathlib import Path
 
 
 # global wild cards of sample and pairpair list
-(SAMPLES,) = glob_wildcards(config["input"]["fastq"] + "{sample}_1.fq.gz")
+(SAMPLES,) = glob_wildcards(Path(config["input"]["fastq"], "{sample}_1.fq.gz"))
 
 
 # all output out
@@ -20,25 +20,25 @@ import os
 rule all:
     input:
         # multiqc output depends on fastqc output, see multiqc rule
-        config["multiqc"]["dir"],
+        "output/multiqc_report.html"
 
 
 # fastqc - check quality of raw fastq-files and merge fastqc reports
 # *********************************************************************
 rule fastqc:
     input:
-        r1=config["input"]["fastq"] + "{sample}_1.fq.gz",
-        r2=config["input"]["fastq"] + "{sample}_2.fq.gz",
+        r1 = Path(config["input"]["fastq"], "{sample}_1.fq.gz"),
+        r2 = Path(config["input"]["fastq"], "{sample}_2.fq.gz"),
     output:
-        r1_html=config["fastqc"]["dir"] + "{sample}_1_fastqc.html",
-        r2_html=config["fastqc"]["dir"] + "{sample}_2_fastqc.html",
-        r1_zip=config["fastqc"]["dir"] + "{sample}_1_fastqc.zip",
-        r2_zip=config["fastqc"]["dir"] + "{sample}_2_fastqc.zip",
+        r1_html = Path(config["fastqc"]["dir"], "{sample}_1_fastqc.html"),
+        r2_html = Path(config["fastqc"]["dir"], "{sample}_2_fastqc.html"),
+        r1_zip = Path(config["fastqc"]["dir"], "{sample}_1_fastqc.zip"),
+        r2_zip = Path(config["fastqc"]["dir"], "{sample}_2_fastqc.zip"),
     params:
         threads=config["threads"],
         dir=directory(config["fastqc"]["dir"]),
     log:
-        "logs/fastqc/{sample}.fastqc.log"
+        Path(config["logdir"], "fastqc", "{sample}.fastqc.log")
     conda:
         "envs/fastqc.yaml"
     shell:
@@ -60,24 +60,12 @@ rule fastqc:
 # *********************************************************************
 rule multiqc:
     input:
-        expand(config["fastqc"]["dir"] + "{sample}_1_fastqc.zip", sample=SAMPLES),
-        expand(config["fastqc"]["dir"] + "{sample}_2_fastqc.zip", sample=SAMPLES)
+        expand(Path(config["fastqc"]["dir"], "{sample}_1_fastqc.zip"), sample=SAMPLES),
+        expand(Path(config["fastqc"]["dir"], "{sample}_2_fastqc.zip"), sample=SAMPLES)
     output:
-        dir=directory(config["multiqc"]["dir"]),
+        "output/multiqc_report.html",
+        directory("qc/multiqc_data"),
     params:
-        rules.fastqc.params.dir,
-    log:
-        "logs/multiqc/multiqc.log"
-    conda:
-        "envs/multiqc.yaml"
-    shell:
-        """
-        echo "##############################################"
-        echo "-----------    Running MultiQC    ------------"
-        echo "##############################################"
-        
-        multiqc \
-            --force {params} \
-            --outdir {output.dir} \
-            2> {log}
-        """
+        extra = "--data-dir"
+    wrapper:
+        "v2.10.0/bio/multiqc"
