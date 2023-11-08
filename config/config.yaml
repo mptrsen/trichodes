@@ -1,17 +1,19 @@
 # number of threads to use, whenever possible
 threads: 2
 
+# log directory
+logdir: logs
 
 # fastq files
 input:
-   fastq: input/fastq/
+   fastq: input/fastq
 
 
 # qc_raw_files - quality control on raw fastq files
 fastqc:
-   dir: output/fastqc/
+   dir: output/fastqc
 
 
 # merge_qc_reports - merge fastqc files from raw fastq files
 multiqc:
-   dir: output/multiqc/
+   dir: output/multiqc
