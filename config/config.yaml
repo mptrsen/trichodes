@@ -11,3 +11,13 @@ input_dir: input/fastq
 adapters:
   5prime: AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT
   3prime: GATCGGAAGAGCACACGTCTGAACTCCAGTCACGGATGACTATCTCGTATGCCGTCTTCTGCTTG
+  universal_r1: AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+  universal_r2: AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+  additional_r1: AGATCGGAAGAGCGTCGTGTAGGGAAAGA
+  additional_r2: GATCGGAAGAGCACACGTCTGAACTCCAGTCAC
+
+# KrakenUniq settings
+krakenuniq:
+  min_seq_len: 100
+  database_path: /data/malte/data/ref/kraken
+  databases: "contaminants refseq/{bacteria,viral,archaea,fungi,protozoa,invertebrate,plant,vertebrate_mammalian,vertebrate_other}"

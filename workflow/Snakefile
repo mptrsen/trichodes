@@ -12,7 +12,7 @@ configfile: "config/config.yaml"
 
 
 # global wild cards of sample and pairpair list
-(SAMPLES,) = glob_wildcards(Path(config["input_dir"], "{sample}_1.fq.gz"))
+(samples,) = glob_wildcards(Path(config["input_dir"], "{sample}_1.fq.gz"))
 
 
 localrules: all, multiqc
@@ -23,24 +23,26 @@ rule all:
     input:
         # multiqc output depends on fastqc output, see multiqc rule
         "results/multiqc_report.html",
-        # seqkit stats table
-        #"doc/stats.tsv"
+        # no assembly for now
+        #expand("results/05_metaspades/{sample}/contigs.fasta", sample = samples)
+        # KrakenUniq installation
+        Path(config["krakenuniq"]["database_path"], '.done')
 
 # seqkit stats - simple statistics overview
 # ********************************************************************
 rule seqkit_stats:
     input:
-        fastx = expand(Path(config["input_dir"], "{sample}_{r}.fq.gz"), sample = SAMPLES, r = [ 1, 2 ])
+        fastx = expand(Path(config["input_dir"], "{sample}_{r}.fq.gz"), sample = samples, r = [ 1, 2 ])
     output:
         stats = "doc/stats.tsv"
     log:
         "logs/stats.log"
     params:
-        command="stats",
-        extra="--all --tabular"
+        command = "stats",
+        extra = "--all --tabular"
     threads: 20
     wrapper:
-        "v2.10.0-1-g4099e4b/bio/seqkit"
+        "v3.0.2/bio/seqkit"
 
 
 # fastqc - check quality of raw fastq-files and merge fastqc reports
@@ -59,7 +61,7 @@ rule fastqc:
     resources:
         mem_mb = 1024
     wrapper:
-        "v2.10.0-1-g4099e4b/bio/fastqc"
+        "v3.0.2/bio/fastqc"
 
 # fastp - all-in-one fastq preprocessor
 # ********************************************************************
@@ -67,37 +69,125 @@ rule fastp:
     input:
         sample = [ Path(config["input_dir"], "{sample}_1.fq.gz"), Path(config["input_dir"], "{sample}_2.fq.gz") ]
     output:
-        trimmed=["results/02_fastp/trimmed/{sample}_1.fq.gz", "results/02_fastp/trimmed/{sample}_2.fq.gz"],
+        trimmed = ["results/02_fastp/trimmed/{sample}_1.fq.gz", "results/02_fastp/trimmed/{sample}_2.fq.gz"],
         # Unpaired reads separately
-        unpaired1="results/02_fastp/trimmed/{sample}.u1.fq.gz",
-        unpaired2="results/02_fastp/trimmed/{sample}.u2.fq.gz",
+        unpaired1 = "results/02_fastp/trimmed/{sample}.u1.fq.gz",
+        unpaired2 = "results/02_fastp/trimmed/{sample}.u2.fq.gz",
         # or in a single file
 	# unpaired="trimmed/pe/{sample}.singletons.fastq",
-        merged="results/02_fastp/trimmed/{sample}.merged.fq.gz",
-        failed="results/02_fastp/trimmed/{sample}.failed.fq.gz",
-        html="results/02_fastp/report/{sample}.fastp.html",
-        json="results/02_fastp/report/{sample}.fastp.json"
+        merged = "results/02_fastp/trimmed/{sample}.merged.fq.gz",
+        failed = "results/02_fastp/trimmed/{sample}.failed.fq.gz",
+        html = "results/02_fastp/report/{sample}.fastp.html",
+        json = "results/02_fastp/report/{sample}.fastp.json"
     log:
         "logs/fastp/{sample}.log"
     threads:
         3
     params:
-        adapters="--adapter_sequence " + config["adapters"]["5prime"] + " --adapter_sequence_r2 " + config["adapters"]["3prime"],
-        extra="--merge"
+        adapters = "--adapter_sequence " + config["adapters"]["5prime"] + " --adapter_sequence_r2 " + config["adapters"]["3prime"],
+        extra = "--merge"
     threads: 2
     wrapper:
-        "v2.10.0/bio/fastp"
+        "v3.0.2/bio/fastp"
+
+# cutadapt - adapter and quality trimmer and filterer
+# *********************************************************************
+rule cutadapt:
+    input:
+        [ Path(config["input_dir"], "{sample}_1.fq.gz"), Path(config["input_dir"], "{sample}_2.fq.gz") ],
+    output:
+        fastq1 = "results/03_cutadapt/trimmed/{sample}_1.fq.gz",
+        fastq2 = "results/03_cutadapt/trimmed/{sample}_2.fq.gz",
+        qc = "results/03_cutadapt/trimmed/{sample}.qc.txt",
+    params:
+        adapters='-a {tprime} -a {universal_r1} -g {fprime} -g {universal_r2} -A {tprime} -G {fprime} -a {additional_r1} -A {additional_r2}'.format(
+            tprime = config["adapters"]["3prime"],
+	    fprime = config["adapters"]["5prime"],
+	    universal_r1 = config["adapters"]["universal_r1"],
+	    universal_r2 = config["adapters"]["universal_r2"],
+	    additional_r1 = config["adapters"]["additional_r1"],
+	    additional_r2 = config["adapters"]["additional_r2"],
+	    ),
+        extra="--minimum-length 1 -q 20 --poly-a --times 3",
+    log:
+        "logs/cutadapt/{sample}.log",
+    threads: 4  # set desired number of threads here
+    wrapper:
+        "v3.0.2/bio/cutadapt/pe"
+
+# fastqc round 2
+#**********************************************************************
+rule fastqc_trimmed:
+    input:
+        "results/03_cutadapt/trimmed/{sample}_{r}.fq.gz"
+    output:
+        html = "results/04_fastqc/{sample}_{r}.html",
+        zip  = "results/04_fastqc/{sample}_{r}_fastqc.zip" # the suffix _fastqc.zip is necessary for multiqc to find the file. If not using multiqc, you are free to choose an arbitrary filename
+    params:
+        extra = "--quiet"
+    log:
+        "logs/fastqc/{sample}_{r}.log"
+    threads: 2
+    resources:
+        mem_mb = 1024
+    wrapper:
+        "v3.0.2/bio/fastqc"
+
+
+# MetaSPADES to assemble contigs
+# *********************************************************************
+rule run_metaspades:
+    input:
+        reads = ["results/03_cutadapt/trimmed/{sample}_1.fq.gz", "results/03_cutadapt/trimmed/{sample}_2.fq.gz"],
+    output:
+        contigs = "results/05_metaspades/{sample}/contigs.fasta",
+        scaffolds = "results/05_metaspades/{sample}/scaffolds.fasta",
+        dir = directory("results/05_metaspades/{sample}/intermediate_files"),
+    benchmark:
+        "logs/benchmarks/assembly/spades.{sample}.txt"
+    params:
+        # all parameters are optional
+        k = "auto",
+        extra = "--only-assembler",
+    log:
+        "log/spades.{sample}.log",
+    threads: 8
+    resources:
+        mem_mem = 250000,
+        time = 60 * 24,
+    wrapper:
+        "v3.0.2/bio/spades/metaspades"
+
 
 # multiqc - merge fastqc reports
 # *********************************************************************
 rule multiqc:
     input:
-        expand("results/01_fastqc/{sample}_{r}_fastqc.zip", sample = SAMPLES, r = ["1", "2"]),
-        expand("results/02_fastp/report/{sample}.fastp.json", sample = SAMPLES)
+        expand("results/01_fastqc/{sample}_{r}_fastqc.zip", sample = samples, r = ["1", "2"]),
+        #expand("results/02_fastp/report/{sample}.fastp.json", sample = samples),
+        expand("results/03_cutadapt/trimmed/{sample}.qc.txt", sample = samples),
+        expand("results/04_fastqc/{sample}_{r}_fastqc.zip", sample = samples, r = ["1", "2"]),
     output:
         "results/multiqc_report.html",
         directory("results/multiqc_data")
     params:
         extra = "--data-dir"
     wrapper:
-        "v2.10.0/bio/multiqc"
+        "v3.0.2/bio/multiqc"
+
+# install KrakenUniq and its database
+# ***********************************************************************
+rule install_krakenuniq:
+    output:
+        Path(config["krakenuniq"]["database_path"], '.done')
+    conda:
+        "envs/krakenuniq.yaml"
+    params:
+        min_seq_len = config["krakenuniq"]["min_seq_len"],
+        databases = lambda wildcards: config["krakenuniq"]["databases"]
+    shell:
+        """
+        mkdir -p $(dirname {output})
+        krakenuniq-download -o {output} --rsync --verbose --min-seq-len {params.min_seq_len} {params.databases}
+        touch {output}
+        """
