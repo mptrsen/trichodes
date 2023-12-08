@@ -26,7 +26,8 @@ rule all:
         # no assembly for now
         #expand("results/05_metaspades/{sample}/contigs.fasta", sample = samples)
         # KrakenUniq installation
-        Path(config["krakenuniq"]["database_path"], '.done')
+        Path(config["krakenuniq"]["database_path"], '.done'),
+        expand("results/05_krakenuniq/{sample}.krakenuniq.report.txt", sample = samples)
 
 # seqkit stats - simple statistics overview
 # ********************************************************************
@@ -190,4 +191,26 @@ rule install_krakenuniq:
         mkdir -p $(dirname {output})
         krakenuniq-download -o {output} --rsync --verbose --min-seq-len {params.min_seq_len} {params.databases}
         touch {output}
+        """
+
+# run KrakenUniq
+# *************************************************************************
+rule krakenuniq:
+    input:
+        db = config["krakenuniq"]["database_path"],
+        fq = ["results/03_cutadapt/trimmed/{sample}_1.fq.gz", "results/03_cutadapt/trimmed/{sample}_2.fq.gz"]
+    output:
+        report = "results/05_krakenuniq/{sample}.krakenuniq.report.txt",
+        tsv = "results/05_krakenuniq/{sample}.krakenuniq.tsv",
+        unclassified = "results/05_krakenuniq/{sample}.krakenuniq.unclassified.txt",
+        classified = "results/05_krakenuniq/{sample}.krakenuniq.classified.txt",
+    conda:
+        "envs/krakenuniq.yaml"
+    threads:
+        16
+    params:
+        extra = "--fastq-input --gz-compressed --paired"
+    shell:
+        """
+        krakenuniq --threads {threads} --db {input.db} {params.extra} --report-file {output.report} --unclassified-out {output.unclassified} --classified-out {output.classified} {input.fq} > {output.tsv}
         """
