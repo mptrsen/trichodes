@@ -1,0 +1,9 @@
+name: jellyfish_count
+description: |
+  Count k-mers using jellyfish
+authors:
+  - Malte Petersen
+input:
+  - fastq file(s)
+output:
+  - k-mer count database

@@ -25,9 +25,10 @@ rule all:
         "results/multiqc_report.html",
         # no assembly for now
         #expand("results/05_metaspades/{sample}/contigs.fasta", sample = samples)
+	expand("results/06_genomescope/{sample}/summary.txt", sample = samples),
         # KrakenUniq installation
         Path(config["krakenuniq"]["database_path"], '.done'),
-        expand("results/05_krakenuniq/{sample}.krakenuniq.report.txt", sample = samples)
+        #expand("results/05_krakenuniq/{sample}.krakenuniq.report.txt", sample = samples)
 
 # seqkit stats - simple statistics overview
 # ********************************************************************
@@ -85,7 +86,7 @@ rule fastp:
     threads:
         3
     params:
-        adapters = "--adapter_sequence " + config["adapters"]["5prime"] + " --adapter_sequence_r2 " + config["adapters"]["3prime"],
+        adapters = "--adapter_sequence " + config["adapters"]["novogene_r1"] + " --adapter_sequence_r2 " + config["adapters"]["novogene_r2"],
         extra = "--merge"
     threads: 2
     wrapper:
@@ -101,15 +102,15 @@ rule cutadapt:
         fastq2 = "results/03_cutadapt/trimmed/{sample}_2.fq.gz",
         qc = "results/03_cutadapt/trimmed/{sample}.qc.txt",
     params:
-        adapters='-a {tprime} -a {universal_r1} -g {fprime} -g {universal_r2} -A {tprime} -G {fprime} -a {additional_r1} -A {additional_r2}'.format(
-            tprime = config["adapters"]["3prime"],
-	    fprime = config["adapters"]["5prime"],
+        adapters='-a {universal_r1} -a {additional_r1} -A {universal_r2} -A {additional_r2}'.format(
+            tprime = config["adapters"]["novogene_r2"],
+	    fprime = config["adapters"]["novogene_r1"],
 	    universal_r1 = config["adapters"]["universal_r1"],
 	    universal_r2 = config["adapters"]["universal_r2"],
 	    additional_r1 = config["adapters"]["additional_r1"],
 	    additional_r2 = config["adapters"]["additional_r2"],
 	    ),
-        extra="--minimum-length 1 -q 20 --poly-a --times 3",
+        extra="--minimum-length 10 -q 20 --poly-a --times 3",
     log:
         "logs/cutadapt/{sample}.log",
     threads: 4  # set desired number of threads here
@@ -164,8 +165,6 @@ rule run_metaspades:
 # *********************************************************************
 rule multiqc:
     input:
-        expand("results/01_fastqc/{sample}_{r}_fastqc.zip", sample = samples, r = ["1", "2"]),
-        #expand("results/02_fastp/report/{sample}.fastp.json", sample = samples),
         expand("results/03_cutadapt/trimmed/{sample}.qc.txt", sample = samples),
         expand("results/04_fastqc/{sample}_{r}_fastqc.zip", sample = samples, r = ["1", "2"]),
     output:
@@ -209,8 +208,60 @@ rule krakenuniq:
     threads:
         16
     params:
-        extra = "--fastq-input --gz-compressed --paired"
+        extra = "--fastq-input --gzip-compressed --paired"
     shell:
         """
         krakenuniq --threads {threads} --db {input.db} {params.extra} --report-file {output.report} --unclassified-out {output.unclassified} --classified-out {output.classified} {input.fq} > {output.tsv}
         """
+
+# run Jellyfish to count and histogram k-mers
+#**************************************************************************
+rule jellyfish_count:
+    input:
+        [ "results/03_cutadapt/trimmed/{sample}_1.fq.gz", "results/03_cutadapt/trimmed/{sample}_2.fq.gz" ]
+    output:
+        "results/05_jellyfish/{sample}.jf",
+    log:
+        "logs/jellyfish/{sample}.jf.log",
+    params:
+        kmer_length=21,
+        size="1G",
+        extra="--canonical",
+    threads: 2
+    wrapper:
+        "file:workflow/wrappers/jellyfish_count"
+
+rule jellyfish_histo:
+    input:
+        "results/05_jellyfish/{sample}.jf",
+    output:
+        "results/05_jellyfish/{sample}.histo",
+    log:
+        "logs/jellyfish/{sample}.histo.log",
+    threads: 2
+    wrapper:
+        "v3.3.3/bio/jellyfish/histo"
+
+# run GenomeScope
+# *************************************************************************
+rule genomescope:
+    input:
+        hist="results/05_jellyfish/{sample}.histo",
+    output:
+        multiext(
+            "results/06_genomescope/{sample}/",
+            "linear_plot.png",
+            "log_plot.png",
+            "model.txt",
+            "progress.txt",
+            "SIMULATED_testing.tsv",
+            "summary.txt",
+            "transformed_linear_plot.png",
+            "transformed_log_plot.png",
+        ),
+    log:
+        "logs/genomescope/{sample}.log",
+    params:
+        extra="--kmer_length 32 --testing",
+    wrapper:
+        "v3.3.3/bio/genomescope"
