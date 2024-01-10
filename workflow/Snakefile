@@ -29,6 +29,7 @@ rule all:
         # KrakenUniq installation
         Path(config["krakenuniq"]["database_path"], '.done'),
         #expand("results/05_krakenuniq/{sample}.krakenuniq.report.txt", sample = samples)
+        "results/07_read2tree/tree_merge.nwk" # read2tree
 
 # seqkit stats - simple statistics overview
 # ********************************************************************
@@ -265,3 +266,29 @@ rule genomescope:
         extra="--kmer_length 32 --testing",
     wrapper:
         "v3.3.3/bio/genomescope"
+
+# run read2tree
+#***************************************************************************
+rule read2tree_map:
+    input:
+        [ "results/03_cutadapt/trimmed/{sample}_1.fq.gz", "results/03_cutadapt/trimmed/{sample}_2.fq.gz" ]
+    output:
+        "results/07_read2tree/{sample}.mapping.done"
+#TODO write rest of this rule
+
+rule read2tree_tree:
+    input:
+        expand("results/07_read2tree/{sample}.mapping.done", sample = samples)
+    output:
+        path = dir("results/07_read2tree"),
+        nwk = "results/07_read2tree/tree_merge.nwk"
+    conda:
+        "envs/read2tree.yaml"
+    threads:
+        24
+    params:
+        marker_genes = "resources/marker_genes"
+    shell:
+        """
+        read2tree --standalone_path {params.marker_genes} --output_path {output.path} --merge_all_mappings --tree
+        """

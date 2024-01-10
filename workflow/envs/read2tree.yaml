@@ -1,0 +1,6 @@
+channels:
+    - bioconda
+    - defaults
+dependencies:
+    - python=3.10.8
+    - read2tree
