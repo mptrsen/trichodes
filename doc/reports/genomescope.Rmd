@@ -1,0 +1,55 @@
+---
+title: "GenomeScope results"
+author:
+  - "Malte Petersen"
+date: "`r format(Sys.time(), '%Y-%M-%D')`"
+params:
+  sample_name: "sample name"
+  summary_path: ""
+output:
+  html_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(gt)
+
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# Sample name
+
+`r params$sample_name`
+
+# Summary table
+
+```{r readin, message=FALSE}
+table_one <- function(table_path, sample_name) {
+  df <- read_fwf(file = table_path,
+                 skip = 8,
+                 col_positions = fwf_positions(start = c(1, 31, 49),
+                                               end = c(30, 48, 66),
+                                               col_names = c("property", "min", "max")
+                                               )
+                 )
+  
+  gt(df)
+}
+table_one(params$summary_path, params$sample_name)
+```
+
+# $k$-mer frequency plots
+
+Linear | Log
+:-----:|:-----:
+![](`r dirname(params$summary_path)`/transformed_linear_plot.png) | ![](`r dirname(params$summary_path)`/transformed_log_plot.png)
+![](`r dirname(params$summary_path)`/linear_plot.png)             | ![](`r dirname(params$summary_path)`/log_plot.png)
+
+# Model test summary
+
+```{r model_text}
+model_text_file <- file.path(dirname(params$summary_path), "model.txt")
+model_text <- readLines(model_text_file)
+writeLines(model_text)
+```
