@@ -1,0 +1,11 @@
+sample,fastq_1,fastq_2
+JE79Mon,results/03_cutadapt/trimmed/JE79Mon_EKDN230037522-1A_HMFHFDSX7_L3_1.fq.gz,results/03_cutadapt/trimmed/JE79Mon_EKDN230037522-1A_HMFHFDSX7_L3_2.fq.gz
+JE82Mon,results/03_cutadapt/trimmed/JE82Mon_EKDN230037523-1A_HMFHFDSX7_L2_1.fq.gz,results/03_cutadapt/trimmed/JE82Mon_EKDN230037523-1A_HMFHFDSX7_L2_2.fq.gz
+JE83Mon,results/03_cutadapt/trimmed/JE83Mon_EKDN230037524-1A_HHN5VDSX7_L2_1.fq.gz,results/03_cutadapt/trimmed/JE83Mon_EKDN230037524-1A_HHN5VDSX7_L2_2.fq.gz
+JE86Mon,results/03_cutadapt/trimmed/JE86Mon_EKDN230037525-1A_HMFHFDSX7_L2_1.fq.gz,results/03_cutadapt/trimmed/JE86Mon_EKDN230037525-1A_HMFHFDSX7_L2_2.fq.gz
+JE90Mon,results/03_cutadapt/trimmed/JE90Mon_EKDN230037526-1A_HMFHFDSX7_L1_1.fq.gz,results/03_cutadapt/trimmed/JE90Mon_EKDN230037526-1A_HMFHFDSX7_L1_2.fq.gz
+JE91Mon,results/03_cutadapt/trimmed/JE91Mon_EKDN230037527-1A_HMFHFDSX7_L1_1.fq.gz,results/03_cutadapt/trimmed/JE91Mon_EKDN230037527-1A_HMFHFDSX7_L1_2.fq.gz
+JE92Mon,results/03_cutadapt/trimmed/JE92Mon_EKDN230037528-1A_HMFHFDSX7_L3_1.fq.gz,results/03_cutadapt/trimmed/JE92Mon_EKDN230037528-1A_HMFHFDSX7_L3_2.fq.gz
+JE93Mon,results/03_cutadapt/trimmed/JE93Mon_EKDN230037529-1A_HHN5VDSX7_L2_1.fq.gz,results/03_cutadapt/trimmed/JE93Mon_EKDN230037529-1A_HHN5VDSX7_L2_2.fq.gz
+JE94Mon,results/03_cutadapt/trimmed/JE94Mon_EKDN230037530-1A_HMFHFDSX7_L2_1.fq.gz,results/03_cutadapt/trimmed/JE94Mon_EKDN230037530-1A_HMFHFDSX7_L2_2.fq.gz
+JE95Mon,results/03_cutadapt/trimmed/JE95Mon_EKDN230037531-1A_HHN5VDSX7_L2_1.fq.gz,results/03_cutadapt/trimmed/JE95Mon_EKDN230037531-1A_HHN5VDSX7_L2_2.fq.gz

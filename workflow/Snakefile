@@ -25,10 +25,15 @@ rule all:
         "results/multiqc_report.html",
         # no assembly for now
         #expand("results/05_metaspades/{sample}/contigs.fasta", sample = samples)
-	expand("results/06_genomescope/{sample}/summary.txt", sample = samples),
+	#expand("results/06_genomescope/{sample}/summary.txt", sample = samples),
         # KrakenUniq installation
-        Path(config["krakenuniq"]["database_path"], '.done'),
+        #Path(config["krakenuniq"]["database_path"], '.done'),
         #expand("results/05_krakenuniq/{sample}.krakenuniq.report.txt", sample = samples)
+<<<<<<< Updated upstream
+=======
+        #"results/07_read2tree/tree_merge.nwk", # read2tree
+        expand("results/05_detaxizer/{sample}", sample = samples)
+>>>>>>> Stashed changes
 
 # seqkit stats - simple statistics overview
 # ********************************************************************
@@ -191,6 +196,20 @@ rule install_krakenuniq:
         krakenuniq-download -o {output} --rsync --verbose --min-seq-len {params.min_seq_len} {params.databases}
         touch {output}
         """
+
+# run detaxizer Nextflow pipeline
+#**************************************************************************
+rule detaxizer:
+    input:
+        config["samplesheet"]
+    output:
+        directory("results/05_detaxizer/{sample}")
+    params:
+        pipeline = "nf-core/detaxizer",
+        profile = ["conda"],
+    handover: True
+    wrapper:
+        "0.74.0/utils/nextflow"
 
 # run KrakenUniq
 # *************************************************************************

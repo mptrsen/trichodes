@@ -1,3 +1,6 @@
+# sample sheet w path to trimmed fastq files, used by nf-core/detaxizer
+samplesheet: config/samplesheet.csv
+
 # number of threads to use, whenever possible
 threads: 2
 
