@@ -187,7 +187,6 @@ rule detaxizer:
     params:
         pipeline = "nf-core/detaxizer",
         profile = ["conda"],
-        config = config["nextflow_config"],
     handover: True
     wrapper:
         "0.74.0/utils/nextflow"
