@@ -12,3 +12,8 @@ output/*
 
 # mac files
 **/.DS_Store
+
+# conda environments
+conda/*
+
+doc/*

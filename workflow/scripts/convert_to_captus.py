@@ -56,7 +56,7 @@ def batch_convert_fasta_files(input_folder, output_folder):
 if __name__ == "__main__":
     # Get input and output directories from command-line arguments
     if len(sys.argv) != 3:
-        print("Usage: python script.py <input_folder> <output_folder>")
+        print(f"Usage: python {sys.argv[0]} <input_folder> <output_folder>")
         sys.exit(1)
 
     input_dir = sys.argv[1]  # Get the input directory path

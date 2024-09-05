@@ -1,0 +1,15 @@
+GenomeScope version 2.0
+input file = results/05_jellyfish/JE95Mon_EKDN230037531-1A_HHN5VDSX7_L2.histo
+output directory = results/06_genomescope/JE95Mon_EKDN230037531-1A_HHN5VDSX7_L2
+p = 2
+k = 32
+TESTING set to TRUE
+
+property                      min               max               
+Homozygous (aa)               98.1953%          98.4798%          
+Heterozygous (ab)             1.5202%           1.80471%          
+Genome Haploid Length         925,299,394 bp    978,372,170 bp    
+Genome Repeat Length          357,129,428 bp    377,613,446 bp    
+Genome Unique Length          568,169,967 bp    600,758,724 bp    
+Model Fit                     72.104%           98.6651%          
+Read Error Rate               0.159811%         0.159811%         
