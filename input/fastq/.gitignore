@@ -1,6 +1,0 @@
-# exclude all fastq files, except those negated below
-*.fastq.gz
-
-# include example fastq files
-!reads_R1.fastq.gz
-!reads_R2.fastq.gz
